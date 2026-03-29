@@ -1,73 +1,81 @@
 import React, { useState } from 'react';
-import CounselingRoom from './components/CounselingRoom'; // 분할 UI 컴포넌트로 교체 완료
+import LoginPage      from './components/LoginPage';
+import Dashboard      from './components/Dashboard';
+import RoomLobby      from './components/RoomLobby';
+import CounselingRoom from './components/CounselingRoom';
 
+/**
+ * 뷰 상태 4단계:
+ *  'login'     → 로그인/회원가입 폼
+ *  'dashboard' → 내 상담 기록 대시보드 (기록 열람 + "상담 대기실" 버튼)
+ *  'lobby'     → 상담 대기실 (방 목록 조회 + 방 만들기)
+ *  'room'      → LiveKit 화상 상담방
+ */
 export default function App() {
-  const [token, setToken] = useState(null);
-  const [inRoom, setInRoom] = useState(false);
+  const [view, setView]         = useState('login');
+  const [user, setUser]         = useState(null);
+  const [token, setToken]       = useState(null);
   const [roomName, setRoomName] = useState('');
 
-  const handleJoinDemo = async () => {
-    try {
-      const loginRes = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'test@example.com', password: 'password123!' })
-      });
-      if (!loginRes.ok) throw new Error('로그인 실패 - 서버를 확인해주세요.');
-
-      const roomRes = await fetch('/api/rooms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', 
-        body: JSON.stringify({ title: 'AI 원격 상담 테스트 화상방' })
-      });
-      if (!roomRes.ok) throw new Error('방 생성 실패 (접근 권한이 없습니다)');
-      const roomData = await roomRes.json();
-      
-      setRoomName(roomData.livekitRoomName);
-
-      const tokenRes = await fetch(`/api/rooms/${roomData.livekitRoomName}/token`, {
-        credentials: 'include' 
-      });
-      if (!tokenRes.ok) throw new Error('LiveKit 토큰 발급 실패');
-      const tokenData = await tokenRes.json();
-
-      setToken(tokenData.token);
-      setInRoom(true);
-    } catch (error) {
-      alert("백엔드 연동 에러가 발생했습니다: " + error.message);
-      console.error(error);
-    }
+  // 로그인 성공 → 대시보드
+  const handleLoginSuccess = (userData) => {
+    setUser(userData);
+    setView('dashboard');
   };
 
-  if (inRoom) {
-    // 뼈대를 CounselingRoom(좌우 분할 레이아웃)으로 교체
+  // 대시보드 "상담 시작" → 로비
+  const handleGoToLobby = () => setView('lobby');
+
+  // 로비에서 방 입장 → 화상방
+  const handleJoinRoom = ({ token: lkToken, roomName: lkRoomName }) => {
+    setToken(lkToken);
+    setRoomName(lkRoomName);
+    setView('room');
+  };
+
+  // 통화 종료 → 대시보드로 복귀
+  const handleLeaveRoom = () => {
+    setToken(null);
+    setRoomName('');
+    setView('dashboard');
+  };
+
+  // 로그아웃 → 로그인 페이지
+  const handleLogout = () => {
+    setUser(null);
+    setView('login');
+  };
+
+  // ── 뷰 라우팅 ──────────────────────────────────────────────
+  if (view === 'room' && token) {
     return (
-      <CounselingRoom 
-        token={token} 
-        serverUrl="wss://airemote-sxsx98nj.livekit.cloud" 
-        roomName={roomName} 
-        onLeave={() => { setInRoom(false); setRoomName(''); }} 
+      <CounselingRoom
+        token={token}
+        serverUrl="wss://airemote-sxsx98nj.livekit.cloud"
+        roomName={roomName}
+        onLeave={handleLeaveRoom}
       />
     );
   }
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center border border-gray-100">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-6 drop-shadow-sm">
-          AI 원격 상담 플랫폼
-        </h1>
-        <p className="text-sm text-gray-500 mb-8 font-medium">
-          안전하고 프라이빗한 전문 상담을 시작하세요.
-        </p>
-        <button 
-          onClick={handleJoinDemo}
-          className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white sm:text-lg font-bold rounded-xl transition-all shadow hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-200"
-        >
-          화상 상담 접속 테스트
-        </button>
-      </div>
-    </div>
-  );
+  if (view === 'lobby') {
+    return (
+      <RoomLobby
+        onJoinRoom={handleJoinRoom}
+        onBack={() => setView('dashboard')}
+      />
+    );
+  }
+
+  if (view === 'dashboard' && user) {
+    return (
+      <Dashboard
+        user={user}
+        onStartCounseling={handleGoToLobby}  // 대시보드 → 로비
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  return <LoginPage onLoginSuccess={handleLoginSuccess} />;
 }

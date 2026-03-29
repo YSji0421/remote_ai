@@ -1,2 +1,6 @@
 backend/.gradle/
 backend/build/
+frontend/node_modules
+ai-server/.env
+ai-server/tmp
+ai-server/__pycache__

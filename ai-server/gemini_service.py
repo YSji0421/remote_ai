@@ -1,25 +1,24 @@
 import os
-import google.generativeai as genai
+from google import genai
 
 class GeminiService:
     def __init__(self):
-        # 윈도우 환경 변수 또는 서버 환경 변수에서 구글 API 키를 읽어옵니다.
-        api_key = os.getenv("AIzaSyCzruEeYROj4LWm0cRUq0kjalJ5euEWmdY", "")
+        # .env 파일의 GEMINI_API_KEY 값을 읽어옵니다.
+        # ⚠️ 절대 API 키 문자열을 코드 안에 직접 적지 마세요! (Git 유출 위험)
+        api_key = os.getenv("GEMINI_API_KEY", "")
         if api_key:
-            genai.configure(api_key=api_key)
-            # 가성비와 속도가 우수한 gemini-1.5-flash 모델 사용
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
-            print("Gemini API가 성공적으로 연동되었습니다.")
+            # 최신 google-genai SDK 방식 (구버전: google.generativeai → 신버전: google.genai)
+            self.client = genai.Client(api_key=api_key)
+            print("Gemini API가 성공적으로 연동되었습니다. (신규 SDK 사용)")
         else:
-            self.model = None
+            self.client = None
             print("=================================================================")
             print("WARNING: GEMINI_API_KEY 환경변수가 설정되지 않았습니다.")
-            print("cmd 터미널에서 'set GEMINI_API_KEY=당신의_키'를 입력 후 서버를 켜주세요.")
             print("=================================================================")
 
     def generate_counseling_summary(self, transcript: str) -> str:
-        if not self.model:
-            return "Gemini API 키가 설정되지 않아 요약을 생성할 수 없습니다. (환경변수 GEMINI_API_KEY 등록 필요)"
+        if not self.client:
+            return "Gemini API 키가 설정되지 않아 요약을 생성할 수 없습니다."
         
         if not transcript or len(transcript.strip()) < 5:
             return "대화 내용이 너무 짧아 요약할 수 없습니다."
@@ -38,7 +37,11 @@ class GeminiService:
 - 추천 솔루션 및 다음 상담 방향: 
 """
         try:
-            response = self.model.generate_content(prompt)
+            # 최신 google-genai SDK 호출 방식
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash-preview-03-25",
+                contents=prompt,
+            )
             return response.text
         except Exception as e:
             print(f"Gemini 요약 중 에러 발생: {e}")

@@ -1,6 +1,10 @@
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
+# .env 파일에서 환경변수(API 키 등) 자동 로딩
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
