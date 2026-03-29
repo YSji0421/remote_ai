@@ -33,6 +33,11 @@ public class Room {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner; 
+
+    // 내방객 (상담자)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id")
+    private User client;
     
     private boolean active; // 현재 상담 진행(채널 열림) 여부
     

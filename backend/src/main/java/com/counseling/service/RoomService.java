@@ -67,7 +67,7 @@ public class RoomService {
     // ─────────────────────────────────────────────────────────────────────────
     // 방 입장 토큰 발급 (DB 교차 권한 검증 포함)
     // ─────────────────────────────────────────────────────────────────────────
-    @Transactional(readOnly = true)
+    @Transactional
     public String getJoinToken(String livekitRoomName, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("가입된 유저가 아닙니다."));
@@ -86,6 +86,11 @@ public class RoomService {
         
         if (!hasPermission) {
             throw new IllegalArgumentException("이 화상방에 입장할 권한이 없습니다.");
+        }
+
+        // 방장이 아니고 아직 내방객이 배정되지 않았다면, 현재 입장하는 유저를 내방객으로 지정
+        if (!isOwner && room.getClient() == null) {
+            room.setClient(user);
         }
 
         return liveKitTokenUtil.generateToken(room.getLivekitRoomName(), user.getEmail(), user.getNickname());

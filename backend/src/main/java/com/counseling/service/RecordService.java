@@ -32,6 +32,11 @@ public class RecordService {
         Room room = roomRepository.findByLivekitRoomName(roomName)
                 .orElseThrow(() -> new IllegalArgumentException("방을 찾을 수 없습니다: " + roomName));
 
+        // 중복 저장 방지: 이미 해당 방에 대한 기록이 있다면 무시
+        if (recordRepository.findByRoomId(room.getId()).isPresent()) {
+            return;
+        }
+
         // 민감한 정보 AES-256 암호화 처리 (의료데이터 보안)
         String encryptedTranscript = encryptionUtil.encrypt(transcript);
         String encryptedSummary = encryptionUtil.encrypt(summary);
@@ -53,7 +58,7 @@ public class RecordService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        return recordRepository.findAllByOwnerId(user.getId())
+        return recordRepository.findAllByParticipantId(user.getId())
                 .stream()
                 .map(r -> RecordDto.Summary.builder()
                         .id(r.getId())
@@ -73,8 +78,11 @@ public class RecordService {
         Record record = recordRepository.findById(recordId)
                 .orElseThrow(() -> new IllegalArgumentException("기록을 찾을 수 없습니다."));
 
-        // 본인 소유 기록인지 검증 (타인의 상담 내용 열람 방지)
-        if (!record.getRoom().getOwner().getEmail().equals(userEmail)) {
+        // 본인 소유 기록인지 검증 (방장 또는 내방객인지 확인)
+        boolean isOwner = record.getRoom().getOwner().getEmail().equals(userEmail);
+        boolean isClient = record.getRoom().getClient() != null && record.getRoom().getClient().getEmail().equals(userEmail);
+        
+        if (!isOwner && !isClient) {
             throw new SecurityException("해당 기록에 대한 접근 권한이 없습니다.");
         }
 

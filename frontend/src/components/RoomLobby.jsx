@@ -7,11 +7,11 @@ import React, { useState, useEffect, useCallback } from 'react';
  * - 참여 인원수 표시 (최대 2명 기준)
  */
 export default function RoomLobby({ onJoinRoom, onBack }) {
-  const [rooms, setRooms]           = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [newTitle, setNewTitle]     = useState('');
-  const [creating, setCreating]     = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [creating, setCreating] = useState(false);
 
   // 방 목록 조회 함수 (3초마다 폴링)
   const fetchRooms = useCallback(async () => {
@@ -64,8 +64,9 @@ export default function RoomLobby({ onJoinRoom, onBack }) {
   // 방 입장 (토큰 발급 후 상위 컴포넌트에 전달)
   const joinRoom = async (livekitRoomName) => {
     try {
-      const tokenRes = await fetch(`/api/rooms/${livekitRoomName}/token`, {
+      const tokenRes = await fetch(`/api/rooms/${livekitRoomName}/token?t=${new Date().getTime()}`, {
         credentials: 'include',
+        cache: 'no-store',
       });
       if (!tokenRes.ok) throw new Error('토큰 발급 실패');
       const tokenData = await tokenRes.json();
@@ -126,11 +127,10 @@ export default function RoomLobby({ onJoinRoom, onBack }) {
               return (
                 <div
                   key={room.roomId}
-                  className={`flex items-center justify-between bg-gray-800/60 border rounded-2xl px-6 py-4 transition-all ${
-                    isFull
+                  className={`flex items-center justify-between bg-gray-800/60 border rounded-2xl px-6 py-4 transition-all ${isFull
                       ? 'border-gray-700 opacity-60'
                       : 'border-gray-700 hover:border-indigo-500 hover:bg-gray-800 hover:shadow-xl hover:shadow-indigo-900/20'
-                  }`}
+                    }`}
                 >
                   <div>
                     <h3 className="font-bold text-white text-lg">{room.title}</h3>
@@ -138,19 +138,17 @@ export default function RoomLobby({ onJoinRoom, onBack }) {
                   </div>
                   <div className="flex items-center gap-4">
                     {/* 참여 인원 배지 */}
-                    <span className={`text-sm font-bold px-3 py-1 rounded-full ${
-                      isFull ? 'bg-red-900/40 text-red-400' : 'bg-green-900/40 text-green-400'
-                    }`}>
+                    <span className={`text-sm font-bold px-3 py-1 rounded-full ${isFull ? 'bg-red-900/40 text-red-400' : 'bg-green-900/40 text-green-400'
+                      }`}>
                       {room.participantCount} / 2
                     </span>
                     <button
                       onClick={() => !isFull && joinRoom(room.livekitRoomName)}
                       disabled={isFull}
-                      className={`font-bold px-5 py-2 rounded-xl transition-all text-sm ${
-                        isFull
+                      className={`font-bold px-5 py-2 rounded-xl transition-all text-sm ${isFull
                           ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                           : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow hover:shadow-indigo-500/30'
-                      }`}
+                        }`}
                     >
                       {isFull ? '정원 초과' : '입장'}
                     </button>
